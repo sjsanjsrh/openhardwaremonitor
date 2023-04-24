@@ -119,6 +119,11 @@ namespace OpenHardwareMonitor.Utilities {
         return;
       }
 
+      if (requestedFile == "data.nntt") {
+        SendNNTT(context.Response);
+        return;
+      }
+
       if (requestedFile.Contains("images_icon")) {
         ServeResourceImage(context.Response, 
           requestedFile.Replace("images_icon/", ""));
@@ -271,6 +276,82 @@ namespace OpenHardwareMonitor.Utilities {
 
       JSON += "}";
       return JSON;
+    }
+
+    private void SendNNTT(HttpListenerResponse response) {
+      StringBuilder sb = new StringBuilder();
+      string data;
+      const char sp = ':';
+      sb.Append(sp);
+      foreach (Node child in root.Nodes) {
+        sb.Append(GenerateNNTT(child, sp));
+        sb.AppendLine();
+      }
+      data = sb.ToString();
+
+      var responseContent = data;
+      byte[] buffer = Encoding.UTF8.GetBytes(responseContent);
+
+      response.AddHeader("Cache-Control", "no-cache");
+
+      response.ContentLength64 = buffer.Length;
+      response.ContentType = "text/plain";
+
+      try {
+        Stream output = response.OutputStream;
+        output.Write(buffer, 0, buffer.Length);
+        output.Close();
+      } catch (HttpListenerException) {
+      }
+
+      response.Close();
+    }
+
+    private StringBuilder GenerateNNTT(Node n,char sp) {
+      StringBuilder sb = new StringBuilder();
+
+      string name = null;
+      string innerText = "";
+      if (n is HardwareNode) {
+        switch(((HardwareNode)n).Hardware.HardwareType){
+          case HardwareType.CPU:
+            name = "CPU";
+            break;
+          case HardwareType.RAM:
+            name = "RAM";
+            break;
+          case HardwareType.GpuNvidia:
+          case HardwareType.GpuAti:
+            name = "GPU";
+            break;
+          case HardwareType.HDD:
+            name = "HDD";
+            break;
+          default:
+            break;
+        }
+        innerText = ((HardwareNode)n).Text;
+      } else if (n is TypeNode) {
+        name = n.Text;
+      } else if (n is SensorNode) {
+        name = n.Text;
+        innerText = ((SensorNode)n).Value;
+      }
+
+
+      if(name != null) {
+        sb.Append(name);
+        sb.AppendLine();
+        sb.Append(innerText);
+        sb.AppendLine();
+        foreach (Node child in n.Nodes) {
+          sb.Append(GenerateNNTT(child, sp));
+          sb.AppendLine();
+        }
+        sb.Append(sp.ToString());
+      }
+
+      return sb;
     }
 
     private static void ReturnFile(HttpListenerContext context, string filePath) 
