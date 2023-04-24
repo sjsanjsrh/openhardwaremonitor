@@ -284,7 +284,7 @@ namespace OpenHardwareMonitor.GUI {
         webMenuItem.Visible = false;
       }
 
-      runWebServer = new UserOption("runWebServerMenuItem", false,
+      runWebServer = new UserOption("runWebServerMenuItem", true,
         runWebServerMenuItem, settings);
       runWebServer.Changed += delegate(object sender, EventArgs e) {
         if (runWebServer.Value)
